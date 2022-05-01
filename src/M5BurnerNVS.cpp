@@ -10,76 +10,80 @@
 std::vector<String> subscribeKeys;
 
 void M5BurnerNVS::init() {
-
     Preferences pref;
-    if(!pref.begin(BURNER_NVS_NAMESPACE, true)) {
+    if (!pref.begin(BURNER_NVS_NAMESPACE, true)) {
         Serial.println(ERR_NVS_NOT_FOUND);
         return;
     }
 
-    if(!Serial || Serial.baudRate() != 115200) {
+    if (!Serial || Serial.baudRate() != 115200) {
         Serial.begin(115200);
     }
 
     initialized = true;
-
 }
 
-void M5BurnerNVS::_listen(void *pvParameters) {
+void M5BurnerNVS::_listen(void* pvParameters) {
     PTASK_CONTEXT* context = (PTASK_CONTEXT*)pvParameters;
     Preferences pref;
     bool exist = pref.begin(BURNER_NVS_NAMESPACE, true);
 
     String comData = "";
-    while(true) {
-        if(!(*context->isListening)) {
+    while (true) {
+        if (!(*context->isListening)) {
             vTaskDelete(NULL);
             break;
         }
 
-        if(Serial.available()) {
+        if (Serial.available()) {
             int b = Serial.read();
             comData += (char)b;
 
-            switch(*context->commandMatchState) {
-
+            switch (*context->commandMatchState) {
                 case COMMAND_MATCH_STATE_IDLE:
 
                 {
-                    if(!comData.startsWith("C")) {
+                    if (!comData.startsWith("C")) {
                         comData = "";
                         break;
                     }
 
-                    while(true) {
+                    while (true) {
                         int next = Serial.peek();
-                        if(next > -1) {
-                            if((comData + (char)next).endsWith(COMMAND_MATCH_STR_CMD_END)) {
-                                if(comData.startsWith(COMMAND_MATCH_STR_LIST)) {
-                                    *context->commandMatchState = COMMAND_MATCH_STATE_LIST;
+                        if (next > -1) {
+                            if ((comData + (char)next)
+                                    .endsWith(COMMAND_MATCH_STR_CMD_END)) {
+                                if (comData.startsWith(
+                                        COMMAND_MATCH_STR_LIST)) {
+                                    *context->commandMatchState =
+                                        COMMAND_MATCH_STATE_LIST;
                                     break;
-                                }
-                                else if(comData.startsWith(COMMAND_MATCH_STR_SET)) {
-                                    *context->commandMatchState = COMMAND_MATCH_STATE_SET;
+                                } else if (comData.startsWith(
+                                               COMMAND_MATCH_STR_SET)) {
+                                    *context->commandMatchState =
+                                        COMMAND_MATCH_STATE_SET;
                                     break;
-                                }
-                                else if(comData.startsWith(COMMAND_MATCH_STR_GET)) {
-                                    *context->commandMatchState = COMMAND_MATCH_STATE_GET;
+                                } else if (comData.startsWith(
+                                               COMMAND_MATCH_STR_GET)) {
+                                    *context->commandMatchState =
+                                        COMMAND_MATCH_STATE_GET;
                                     break;
-                                }
-                                else if(comData.startsWith(COMMAND_MATCH_STR_INIT)) {
-                                    *context->commandMatchState = COMMAND_MATCH_STATE_INIT;
+                                } else if (comData.startsWith(
+                                               COMMAND_MATCH_STR_INIT)) {
+                                    *context->commandMatchState =
+                                        COMMAND_MATCH_STATE_INIT;
                                     break;
-                                }
-                                else if(comData.startsWith(COMMAND_MATCH_STR_SUB)) {
-                                    *context->commandMatchState = COMMAND_MATCH_STATE_SUB;
+                                } else if (comData.startsWith(
+                                               COMMAND_MATCH_STR_SUB)) {
+                                    *context->commandMatchState =
+                                        COMMAND_MATCH_STATE_SUB;
                                     break;
-                                }
-                                else if(comData.startsWith(COMMAND_MATCH_STR_UNSUB)) {
-                                    *context->commandMatchState = COMMAND_MATCH_STATE_UNSUB;
+                                } else if (comData.startsWith(
+                                               COMMAND_MATCH_STR_UNSUB)) {
+                                    *context->commandMatchState =
+                                        COMMAND_MATCH_STATE_UNSUB;
                                     break;
-                                }
-                                else {
+                                } else {
                                     Serial.read();
                                     comData = "";
                                     break;
@@ -89,26 +93,25 @@ void M5BurnerNVS::_listen(void *pvParameters) {
                                 comData += (char)n;
                             }
                         }
-                        vTaskDelay( 1 / portTICK_RATE_MS);
+                        vTaskDelay(1 / portTICK_RATE_MS);
                     }
 
                     break;
 
                     break;
-
                 }
 
                 case COMMAND_MATCH_STATE_INIT:
 
                 {
-                    if(!exist) {
+                    if (!exist) {
                         Serial.println(ERR_NVS_NOT_FOUND);
                     } else {
                         Serial.println(INF_NVS_EXIST);
                         subscribeKeys.clear();
                     }
 
-                    comData = "";
+                    comData                     = "";
                     *context->commandMatchState = COMMAND_MATCH_STATE_IDLE;
 
                     break;
@@ -120,7 +123,7 @@ void M5BurnerNVS::_listen(void *pvParameters) {
                     String list = get(BURNER_NVS_KEYS_FIELD);
                     Serial.println(list);
 
-                    comData = "";
+                    comData                     = "";
                     *context->commandMatchState = COMMAND_MATCH_STATE_IDLE;
 
                     break;
@@ -133,7 +136,7 @@ void M5BurnerNVS::_listen(void *pvParameters) {
                     comData.trim();
 
                     int separatorIdx = comData.indexOf('=');
-                    if(separatorIdx >= 0) {
+                    if (separatorIdx >= 0) {
                         String key = comData.substring(0, separatorIdx);
                         String val = comData.substring(separatorIdx + 1);
                         set(key, val);
@@ -141,12 +144,11 @@ void M5BurnerNVS::_listen(void *pvParameters) {
                         Serial.println("OK");
                     }
 
-                    comData = "";
+                    comData                     = "";
                     *context->commandMatchState = COMMAND_MATCH_STATE_IDLE;
 
                     break;
                 }
-
 
                 case COMMAND_MATCH_STATE_GET:
 
@@ -157,7 +159,7 @@ void M5BurnerNVS::_listen(void *pvParameters) {
                     String val = get(comData.c_str());
                     Serial.println(val);
 
-                    comData = "";
+                    comData                     = "";
                     *context->commandMatchState = COMMAND_MATCH_STATE_IDLE;
 
                     break;
@@ -170,18 +172,18 @@ void M5BurnerNVS::_listen(void *pvParameters) {
                     comData.trim();
 
                     bool hasSub = false;
-                    for(int i = 0; i < subscribeKeys.size(); i++) {
-                        if(subscribeKeys[i] == comData) {
+                    for (int i = 0; i < subscribeKeys.size(); i++) {
+                        if (subscribeKeys[i] == comData) {
                             hasSub = true;
                             break;
                         }
                     }
 
-                    if(!hasSub) {
+                    if (!hasSub) {
                         subscribeKeys.push_back(comData);
                     }
 
-                    comData = "";
+                    comData                     = "";
                     *context->commandMatchState = COMMAND_MATCH_STATE_IDLE;
 
                     break;
@@ -193,14 +195,14 @@ void M5BurnerNVS::_listen(void *pvParameters) {
                     comData.replace(COMMAND_MATCH_STR_UNSUB, "");
                     comData.trim();
 
-                    for(int i = 0; i < subscribeKeys.size(); i++) {
-                        if(subscribeKeys[i] == comData) {
+                    for (int i = 0; i < subscribeKeys.size(); i++) {
+                        if (subscribeKeys[i] == comData) {
                             subscribeKeys.erase(subscribeKeys.begin() + i);
                             break;
                         }
                     }
 
-                    comData = "";
+                    comData                     = "";
                     *context->commandMatchState = COMMAND_MATCH_STATE_IDLE;
 
                     break;
@@ -211,31 +213,27 @@ void M5BurnerNVS::_listen(void *pvParameters) {
             }
         }
 
-        vTaskDelay( 1000 / portTICK_RATE_MS);
+        vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
 
 void M5BurnerNVS::listen() {
-    if(!initialized)
-        return;
+    if (!initialized) return;
 
-    if(isListening)
-        return;
+    if (isListening) return;
 
     Serial.flush();
-    isListening = true;
+    isListening                       = true;
     static PTASK_CONTEXT pTaskContext = {
-            .commandMatchState = &commandMatchState,
-            .isListening = &isListening,
-            .isConnected = &isConnected
-    };
-    xTaskCreatePinnedToCore(_listen, "listen", 2048,
-                &pTaskContext, 12, NULL, 0);
+        .commandMatchState = &commandMatchState,
+        .isListening       = &isListening,
+        .isConnected       = &isConnected};
+    xTaskCreatePinnedToCore(_listen, "listen", 2048, &pTaskContext, 12, NULL,
+                            0);
 }
 
 void M5BurnerNVS::end() {
-    if(!isListening)
-        return;
+    if (!isListening) return;
     isListening = false;
     isConnected = false;
 }
@@ -252,23 +250,23 @@ void M5BurnerNVS::set(String key, String val) {
     pref.putString(key.c_str(), val.c_str());
 
     bool keyExist = false;
-    String keys = get(BURNER_NVS_KEYS_FIELD);
-    while(keys.indexOf('/') > -1) {
-        int idx = keys.indexOf('/');
+    String keys   = get(BURNER_NVS_KEYS_FIELD);
+    while (keys.indexOf('/') > -1) {
+        int idx      = keys.indexOf('/');
         String field = keys.substring(0, idx);
-        if(field == key) {
+        if (field == key) {
             keyExist = true;
             break;
         }
         keys = keys.substring(idx + 1);
     }
-    if(!keyExist && keys != key) {
+    if (!keyExist && keys != key) {
         pref.putString(BURNER_NVS_KEYS_FIELD,
                        pref.getString(BURNER_NVS_KEYS_FIELD, "") + "/" + key);
     }
 
-    for(int i = 0; i < subscribeKeys.size(); i++) {
-        if(subscribeKeys[i] == key) {
+    for (int i = 0; i < subscribeKeys.size(); i++) {
+        if (subscribeKeys[i] == key) {
             Serial.println("CMD::PUB:" + key + "=" + val);
             break;
         }
