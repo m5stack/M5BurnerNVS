@@ -1,6 +1,6 @@
-//
-// Created by Hugh on 2022/3/29.
-//
+// Copyright (c) M5Stack. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full
+// license information.
 
 #ifndef ARDUINO_M5STACK_CORE_DEMO_M5BURNERNVS_H
 #define ARDUINO_M5STACK_CORE_DEMO_M5BURNERNVS_H
