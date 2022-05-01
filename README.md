@@ -1,4 +1,4 @@
-# M5Template-C-CPP
+# M5BurnerNVS
 Template for M5Stack C and CPP projects.
 
 ## Steps
